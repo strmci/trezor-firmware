@@ -1,3 +1,4 @@
+from storage import is_initialized
 from trezor import config, ui, wire
 from trezor.messages.Success import Success
 from trezor.pin import pin_to_int
@@ -11,7 +12,6 @@ from apps.common.request_pin import (
     request_pin_and_sd_salt,
     show_pin_invalid,
 )
-from storage import is_initialized
 
 if False:
     from trezor.messages.ChangeWipeCode import ChangeWipeCode
