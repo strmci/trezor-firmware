@@ -912,6 +912,13 @@ static secbool unlock(uint32_t pin, const uint8_t *ext_salt) {
     return secfalse;
   }
 
+  // Check whether the user entered the wipe code.
+  if (sectrue != is_not_wipe_code(pin)) {
+    storage_wipe();
+    error_shutdown("You have entered the", "wipe code. All private",
+                   "data has been erased.", NULL);
+  }
+
   // Get the pin failure counter
   uint32_t ctr = 0;
   if (sectrue != pin_get_fails(&ctr)) {
@@ -960,6 +967,7 @@ static secbool unlock(uint32_t pin, const uint8_t *ext_salt) {
   uint8_t kek[SHA256_DIGEST_LENGTH] = {0};
   uint8_t keiv[SHA256_DIGEST_LENGTH] = {0};
   derive_kek(pin, (const uint8_t *)rand_salt, ext_salt, kek, keiv);
+  memzero(&pin, sizeof(pin));
 
   // First, we increase PIN fail counter in storage, even before checking the
   // PIN.  If the PIN is correct, we reset the counter afterwards.  If not, we
@@ -974,13 +982,6 @@ static secbool unlock(uint32_t pin, const uint8_t *ext_salt) {
     handle_fault("PIN counter increment");
     return secfalse;
   }
-
-  // Check whether the user entered the wipe code.
-  if (sectrue != is_not_wipe_code(pin)) {
-    storage_wipe();
-    error_shutdown("Critical failure.", NULL, NULL, NULL);
-  }
-  memzero(&pin, sizeof(pin));
 
   // Check whether the entered PIN is correct.
   if (sectrue != decrypt_dek(kek, keiv)) {
