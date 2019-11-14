@@ -173,10 +173,12 @@ class TrezorClient:
         else:
             return resp
 
-    def _callback_passphrase(self, msg):
-        if msg.on_device:
+    def _callback_passphrase(self, msg: messages.PassphraseRequest):
+        if False:  # self.passphrase_on_host  TODO: add a flag to client?
+            on_device = True
             passphrase = None
         else:
+            on_device = False
             try:
                 passphrase = self.ui.get_passphrase()
             except exceptions.Cancelled:
@@ -188,15 +190,9 @@ class TrezorClient:
                 self.call_raw(messages.Cancel())
                 raise ValueError("Passphrase too long")
 
-        resp = self.call_raw(
-            messages.PassphraseAck(passphrase=passphrase, state=self.state)
+        return self.call_raw(
+            messages.PassphraseAck(passphrase=passphrase, on_device=on_device)
         )
-        if isinstance(resp, messages.PassphraseStateRequest):
-            # TODO report to the user that the passphrase has changed?
-            self.state = resp.state
-            return self.call_raw(messages.PassphraseStateAck())
-        else:
-            return resp
 
     def _callback_button(self, msg):
         __tracebackhide__ = True  # for pytest # pylint: disable=W0612
@@ -241,6 +237,9 @@ class TrezorClient:
             self.features.patch_version,
         )
         self.check_firmware_version(warn_only=True)
+        if self.version >= (2, 1, 9):  # TODO
+            self.state = self.features.state
+            print("I'm remembering state: ", self.state)
 
     def is_outdated(self):
         if self.features.bootloader_mode:
